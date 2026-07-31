@@ -85,7 +85,62 @@
   }
   .status-dot{width:7px;height:7px;border-radius:50%;background:var(--yellow); box-shadow:0 0 8px var(--yellow);}
 
-  /* ---------- setup ---------- */
+  /* ---------- nav tabs / views ---------- */
+  .tabnav{
+    display:flex; gap:10px; margin:24px 0 0;
+  }
+  .tab-btn{
+    font-family:var(--mono); font-size:11.5px; letter-spacing:.1em; text-transform:uppercase;
+    background:var(--panel); border:1px solid rgba(242,242,237,0.1); color:var(--gray);
+    padding:11px 20px; border-radius:999px; cursor:pointer; transition:all .18s;
+  }
+  .tab-btn:hover{color:var(--paper); border-color:rgba(245,196,0,0.4);}
+  .tab-btn.active{background:var(--yellow); color:var(--black); border-color:var(--yellow); font-weight:700;}
+
+  .view{display:none;}
+  .view.active{display:block;}
+
+  /* ---------- field randomization page ---------- */
+  .randomizer-card{
+    max-width:640px; margin:36px auto 0; text-align:center;
+    background:linear-gradient(180deg, var(--panel), var(--panel-2));
+    border:1px solid rgba(242,242,237,0.08); border-radius:var(--radius);
+    padding:44px 36px 38px;
+  }
+  .rand-hex-row{display:flex; justify-content:center; gap:16px; margin-bottom:22px;}
+  .big-hex{
+    width:20px; height:20px;
+    animation:pulseHex 2.4s ease-in-out infinite;
+  }
+  .rand-hex-row .big-hex:nth-child(2){animation-delay:.5s;}
+
+  .rand-result{
+    font-family:var(--mono); font-weight:800; font-size:56px; letter-spacing:.04em;
+    color:var(--paper);
+    background:#0f0f10; border:1px solid rgba(242,242,237,0.12); border-radius:12px;
+    padding:34px 20px; margin:0 auto 30px; max-width:420px;
+    box-shadow: inset 0 -2px 0 rgba(0,0,0,.5), 0 6px 18px rgba(0,0,0,.35);
+    transition:box-shadow .3s ease, color .3s ease;
+  }
+  .rand-result.locked-1{color:var(--red); box-shadow: inset 0 -2px 0 rgba(0,0,0,.5), 0 0 30px rgba(230,57,74,.25);}
+  .rand-result.locked-2{color:var(--blue); box-shadow: inset 0 -2px 0 rgba(0,0,0,.5), 0 0 30px rgba(47,124,246,.25);}
+
+  .rand-history{
+    margin-top:26px; padding-top:18px; border-top:1px solid rgba(242,242,237,0.08);
+    display:flex; flex-wrap:wrap; gap:8px; justify-content:center;
+  }
+  .rand-history .chip{
+    font-family:var(--mono); font-size:10.5px; letter-spacing:.06em;
+    border:1px solid rgba(242,242,237,0.15); border-radius:999px; padding:5px 12px;
+    color:var(--gray);
+  }
+  .rand-history .chip:first-child{color:var(--yellow); border-color:rgba(245,196,0,0.4);}
+  .rand-history-label{
+    width:100%; font-family:var(--mono); font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--gray-dim); margin-bottom:4px;
+  }
+
+
   .subtitle{
     color:var(--gray); font-size:14.5px; line-height:1.6; max-width:560px;
     margin:22px 0 30px;
@@ -124,11 +179,22 @@
   }
   .alliance-input:focus{border-color:var(--yellow); color:var(--paper);}
 
+  .section-label{
+    display:flex; align-items:baseline; gap:8px;
+    font-family:var(--mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--yellow); margin:20px 0 2px; padding-top:14px; border-top:1px solid rgba(242,242,237,0.08);
+  }
+  .section-label:first-of-type{margin-top:16px;}
+  .section-label span{
+    font-family:var(--body); font-size:10.5px; letter-spacing:0; text-transform:none; color:var(--gray-dim);
+  }
+
   .stat-row{
     display:grid; grid-template-columns:1fr auto; align-items:center; gap:12px;
-    padding:12px 0; border-top:1px solid rgba(242,242,237,0.06);
+    padding:10px 0; border-top:1px solid rgba(242,242,237,0.06);
   }
   .stat-row:first-of-type{border-top:1px solid rgba(242,242,237,0.06); margin-top:14px;}
+  .section-label + .stat-row{border-top:none; margin-top:8px;}
   .stat-label{font-size:13.5px; color:var(--paper); line-height:1.3;}
   .stat-points{display:block; font-family:var(--mono); font-size:11px; color:var(--gray-dim); margin-top:2px;}
 
@@ -332,6 +398,14 @@
     <div class="status-pill"><span class="status-dot"></span> Match Scorekeeper</div>
   </header>
 
+  <nav class="tabnav">
+    <button class="tab-btn active" data-view="score">⬡ Match Scorekeeper</button>
+    <button class="tab-btn" data-view="random">⬡ Field Randomization</button>
+  </nav>
+
+  <!-- ================= SCOREKEEPER VIEW ================= -->
+  <div class="view active" id="view-score">
+
   <p class="subtitle">Enter each alliance's match stats below, then hit <b>Reveal Score</b> for a full scoreboard reveal — flap counters, a winner call, and the full points breakdown.</p>
 
   <!-- ================= SETUP STAGE ================= -->
@@ -345,18 +419,39 @@
           <input class="alliance-input" id="redTeam" placeholder="Team name / #" value="">
         </div>
 
+        <div class="section-label">Autonomous <span>count what's in the zone</span></div>
         <div class="stat-row">
-          <div class="stat-label">Artifacts scored<span class="stat-points">2 pts each</span></div>
-          <div class="stepper" data-field="red-artifacts"><button data-dir="-1">–</button><input type="number" value="0" min="0" readonly><button data-dir="1">+</button></div>
+          <div class="stat-label">Artifacts in zone<span class="stat-points">2 pts each</span></div>
+          <div class="stepper" data-field="red-autoArtifacts"><button data-dir="-1">–</button><input type="number" value="0" min="0" readonly><button data-dir="1">+</button></div>
         </div>
         <div class="stat-row">
-          <div class="stat-label">BioBuzz Balls scored<span class="stat-points">4 pts each</span></div>
-          <div class="stepper" data-field="red-balls"><button data-dir="-1">–</button><input type="number" value="0" min="0" readonly><button data-dir="1">+</button></div>
+          <div class="stat-label">BioBuzz Balls in zone<span class="stat-points">4 pts each</span></div>
+          <div class="stepper" data-field="red-autoBalls"><button data-dir="-1">–</button><input type="number" value="0" min="0" readonly><button data-dir="1">+</button></div>
         </div>
         <div class="stat-row">
-          <div class="stat-label">Robots that left zone in Auto<span class="stat-points">3 pts each · max 2</span></div>
-          <div class="stepper" data-field="red-auto"><button data-dir="-1">–</button><input type="number" value="0" min="0" max="2" readonly><button data-dir="1">+</button></div>
+          <div class="stat-label">Special Artifacts in zone<span class="stat-points">10 pts each</span></div>
+          <div class="stepper" data-field="red-autoSpecial"><button data-dir="-1">–</button><input type="number" value="0" min="0" readonly><button data-dir="1">+</button></div>
         </div>
+        <div class="stat-row">
+          <div class="stat-label">Robots that left zone<span class="stat-points">3 pts each · max 2</span></div>
+          <div class="stepper" data-field="red-autoLeave"><button data-dir="-1">–</button><input type="number" value="0" min="0" max="2" readonly><button data-dir="1">+</button></div>
+        </div>
+
+        <div class="section-label">Teleop <span>count what's in the zone again</span></div>
+        <div class="stat-row">
+          <div class="stat-label">Artifacts in zone<span class="stat-points">2 pts each</span></div>
+          <div class="stepper" data-field="red-teleopArtifacts"><button data-dir="-1">–</button><input type="number" value="0" min="0" readonly><button data-dir="1">+</button></div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label">BioBuzz Balls in zone<span class="stat-points">4 pts each</span></div>
+          <div class="stepper" data-field="red-teleopBalls"><button data-dir="-1">–</button><input type="number" value="0" min="0" readonly><button data-dir="1">+</button></div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label">Special Artifacts in zone<span class="stat-points">10 pts each</span></div>
+          <div class="stepper" data-field="red-teleopSpecial"><button data-dir="-1">–</button><input type="number" value="0" min="0" readonly><button data-dir="1">+</button></div>
+        </div>
+
+        <div class="section-label">End game &amp; penalties</div>
         <div class="stat-row">
           <div class="stat-label">Partial parks<span class="stat-points">5 pts each · max 2</span></div>
           <div class="stepper" data-field="red-partial"><button data-dir="-1">–</button><input type="number" value="0" min="0" max="2" readonly><button data-dir="1">+</button></div>
@@ -366,11 +461,11 @@
           <div class="stepper" data-field="red-full"><button data-dir="-1">–</button><input type="number" value="0" min="0" max="2" readonly><button data-dir="1">+</button></div>
         </div>
         <div class="stat-row">
-          <div class="stat-label">Fouls — carry / contact<span class="stat-points">−3 pts each</span></div>
+          <div class="stat-label">Fouls — carry / contact<span class="stat-points">gives opponent +3 pts each</span></div>
           <div class="stepper" data-field="red-foul3"><button data-dir="-1">–</button><input type="number" value="0" min="0" readonly><button data-dir="1">+</button></div>
         </div>
         <div class="stat-row">
-          <div class="stat-label">Fouls — knock-off High Zone<span class="stat-points">−5 pts each</span></div>
+          <div class="stat-label">Fouls — knock-off High Zone<span class="stat-points">gives opponent +5 pts each</span></div>
           <div class="stepper" data-field="red-foul5"><button data-dir="-1">–</button><input type="number" value="0" min="0" readonly><button data-dir="1">+</button></div>
         </div>
 
@@ -389,18 +484,39 @@
           <input class="alliance-input" id="blueTeam" placeholder="Team name / #" value="">
         </div>
 
+        <div class="section-label">Autonomous <span>count what's in the zone</span></div>
         <div class="stat-row">
-          <div class="stat-label">Artifacts scored<span class="stat-points">2 pts each</span></div>
-          <div class="stepper" data-field="blue-artifacts"><button data-dir="-1">–</button><input type="number" value="0" min="0" readonly><button data-dir="1">+</button></div>
+          <div class="stat-label">Artifacts in zone<span class="stat-points">2 pts each</span></div>
+          <div class="stepper" data-field="blue-autoArtifacts"><button data-dir="-1">–</button><input type="number" value="0" min="0" readonly><button data-dir="1">+</button></div>
         </div>
         <div class="stat-row">
-          <div class="stat-label">BioBuzz Balls scored<span class="stat-points">4 pts each</span></div>
-          <div class="stepper" data-field="blue-balls"><button data-dir="-1">–</button><input type="number" value="0" min="0" readonly><button data-dir="1">+</button></div>
+          <div class="stat-label">BioBuzz Balls in zone<span class="stat-points">4 pts each</span></div>
+          <div class="stepper" data-field="blue-autoBalls"><button data-dir="-1">–</button><input type="number" value="0" min="0" readonly><button data-dir="1">+</button></div>
         </div>
         <div class="stat-row">
-          <div class="stat-label">Robots that left zone in Auto<span class="stat-points">3 pts each · max 2</span></div>
-          <div class="stepper" data-field="blue-auto"><button data-dir="-1">–</button><input type="number" value="0" min="0" max="2" readonly><button data-dir="1">+</button></div>
+          <div class="stat-label">Special Artifacts in zone<span class="stat-points">10 pts each</span></div>
+          <div class="stepper" data-field="blue-autoSpecial"><button data-dir="-1">–</button><input type="number" value="0" min="0" readonly><button data-dir="1">+</button></div>
         </div>
+        <div class="stat-row">
+          <div class="stat-label">Robots that left zone<span class="stat-points">3 pts each · max 2</span></div>
+          <div class="stepper" data-field="blue-autoLeave"><button data-dir="-1">–</button><input type="number" value="0" min="0" max="2" readonly><button data-dir="1">+</button></div>
+        </div>
+
+        <div class="section-label">Teleop <span>count what's in the zone again</span></div>
+        <div class="stat-row">
+          <div class="stat-label">Artifacts in zone<span class="stat-points">2 pts each</span></div>
+          <div class="stepper" data-field="blue-teleopArtifacts"><button data-dir="-1">–</button><input type="number" value="0" min="0" readonly><button data-dir="1">+</button></div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label">BioBuzz Balls in zone<span class="stat-points">4 pts each</span></div>
+          <div class="stepper" data-field="blue-teleopBalls"><button data-dir="-1">–</button><input type="number" value="0" min="0" readonly><button data-dir="1">+</button></div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label">Special Artifacts in zone<span class="stat-points">10 pts each</span></div>
+          <div class="stepper" data-field="blue-teleopSpecial"><button data-dir="-1">–</button><input type="number" value="0" min="0" readonly><button data-dir="1">+</button></div>
+        </div>
+
+        <div class="section-label">End game &amp; penalties</div>
         <div class="stat-row">
           <div class="stat-label">Partial parks<span class="stat-points">5 pts each · max 2</span></div>
           <div class="stepper" data-field="blue-partial"><button data-dir="-1">–</button><input type="number" value="0" min="0" max="2" readonly><button data-dir="1">+</button></div>
@@ -410,11 +526,11 @@
           <div class="stepper" data-field="blue-full"><button data-dir="-1">–</button><input type="number" value="0" min="0" max="2" readonly><button data-dir="1">+</button></div>
         </div>
         <div class="stat-row">
-          <div class="stat-label">Fouls — carry / contact<span class="stat-points">−3 pts each</span></div>
+          <div class="stat-label">Fouls — carry / contact<span class="stat-points">gives opponent +3 pts each</span></div>
           <div class="stepper" data-field="blue-foul3"><button data-dir="-1">–</button><input type="number" value="0" min="0" readonly><button data-dir="1">+</button></div>
         </div>
         <div class="stat-row">
-          <div class="stat-label">Fouls — knock-off High Zone<span class="stat-points">−5 pts each</span></div>
+          <div class="stat-label">Fouls — knock-off High Zone<span class="stat-points">gives opponent +5 pts each</span></div>
           <div class="stepper" data-field="blue-foul5"><button data-dir="-1">–</button><input type="number" value="0" min="0" readonly><button data-dir="1">+</button></div>
         </div>
 
@@ -462,6 +578,27 @@
     <div class="reset-zone"><button class="reset-btn" id="resetBtn">↺ New Match</button></div>
   </div>
 
+  </div><!-- /view-score -->
+
+  <!-- ================= FIELD RANDOMIZATION VIEW ================= -->
+  <div class="view" id="view-random">
+    <p class="subtitle">Randomize before the match to decide which row the Artifacts and BioBuzz Balls start in — a fair, on-the-spot field setup call, just like an official randomization.</p>
+
+    <div class="randomizer-card">
+      <div class="rand-hex-row">
+        <div class="hex big-hex" id="randHexLeft"></div>
+        <div class="hex big-hex" id="randHexRight"></div>
+      </div>
+
+      <div class="rand-result" id="randResult">?</div>
+
+      <div class="reveal-zone"><button class="reveal-btn" id="randomizeBtn">⬡ RANDOMIZE ⬡</button></div>
+      <p class="reveal-hint">TAP TO PICK ROW 1 OR ROW 2</p>
+
+      <div class="rand-history" id="randHistory"></div>
+    </div>
+  </div><!-- /view-random -->
+
   <footer>POLLEN COLLECTION SCOREKEEPER · BUILT FOR SKILL BUILDERS CHALLENGE #5 · UNOFFICIAL FAN TOOL</footer>
 </div>
 
@@ -471,16 +608,26 @@
 
   /* ---------------- point values ---------------- */
   const POINTS = {
-    artifacts: 2,
-    balls: 4,
-    auto: 3,
+    autoArtifacts: 2,
+    autoBalls: 4,
+    autoSpecial: 10,
+    autoLeave: 3,
+    teleopArtifacts: 2,
+    teleopBalls: 4,
+    teleopSpecial: 10,
     partial: 5,
     full: 10,
-    foul3: -3,
-    foul5: -5
+    foul3: 3,
+    foul5: 5
   };
 
-  const FIELDS = ["artifacts","balls","auto","partial","full","foul3","foul5"];
+  const OWN_FIELDS = ["autoArtifacts","autoBalls","autoSpecial","autoLeave",
+                      "teleopArtifacts","teleopBalls","teleopSpecial",
+                      "partial","full"];
+  const FOUL_FIELDS = ["foul3","foul5"];
+  const FIELDS = OWN_FIELDS.concat(FOUL_FIELDS);
+
+  function opponentOf(alliance){ return alliance === "red" ? "blue" : "red"; }
 
   /* ---------------- stepper wiring ---------------- */
   function getVal(alliance, field){
@@ -496,9 +643,14 @@
     stepper.value = v;
   }
 
+  // an alliance's total = its own scoring fields + penalty points awarded
+  // because the OPPONENT committed fouls (fouls no longer cost you your own
+  // points -- they hand points to the other alliance instead).
   function allianceTotal(alliance){
     let total = 0;
-    FIELDS.forEach(f => { total += getVal(alliance, f) * POINTS[f]; });
+    OWN_FIELDS.forEach(f => { total += getVal(alliance, f) * POINTS[f]; });
+    const opp = opponentOf(alliance);
+    FOUL_FIELDS.forEach(f => { total += getVal(opp, f) * POINTS[f]; });
     return total;
   }
 
@@ -640,13 +792,29 @@
 
   function buildBreakdown(){
     const labels = {
-      artifacts:"Artifacts scored", balls:"BioBuzz Balls scored", auto:"Auto zone-leave bonus",
-      partial:"Partial parks", full:"Full parks", foul3:"Fouls (carry/contact)", foul5:"Fouls (knock-off)"
+      autoArtifacts:"Auto — Artifacts in zone", autoBalls:"Auto — BioBuzz Balls in zone",
+      autoSpecial:"Auto — Special Artifacts in zone", autoLeave:"Auto zone-leave bonus",
+      teleopArtifacts:"Teleop — Artifacts in zone", teleopBalls:"Teleop — BioBuzz Balls in zone",
+      teleopSpecial:"Teleop — Special Artifacts in zone",
+      partial:"Partial parks", full:"Full parks",
+      foul3:"Fouls — carry/contact", foul5:"Fouls — knock-off"
     };
     ["red","blue"].forEach(alliance => {
+      const opp = opponentOf(alliance);
+      const oppLabel = opp === "red" ? "Red" : "Blue";
       const linesEl = document.getElementById(alliance + "BdLines");
       let html = "";
-      FIELDS.forEach(f => { html += bdLine(labels[f], getVal(alliance,f), POINTS[f]); });
+      OWN_FIELDS.forEach(f => { html += bdLine(labels[f], getVal(alliance,f), POINTS[f]); });
+      FOUL_FIELDS.forEach(f => {
+        const n = getVal(opp, f);
+        html += bdLine(`${oppLabel}'s ${labels[f].toLowerCase()} (penalty awarded to you)`, n, POINTS[f]);
+      });
+      FOUL_FIELDS.forEach(f => {
+        const n = getVal(alliance, f);
+        if (n > 0){
+          html += `<div class="bd-line"><span><b>${n}×</b> ${labels[f]} you committed (points went to ${oppLabel})</span><span class="pts zero">0</span></div>`;
+        }
+      });
       linesEl.innerHTML = html;
       document.getElementById(alliance + "BdTotal").textContent = allianceTotal(alliance);
     });
@@ -749,6 +917,61 @@
     }
     requestAnimationFrame(tick);
   }
+
+  /* ---------------- nav tabs ---------------- */
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      const target = btn.getAttribute("data-view");
+      document.getElementById("view-score").classList.toggle("active", target === "score");
+      document.getElementById("view-random").classList.toggle("active", target === "random");
+      window.scrollTo({top:0, behavior:"smooth"});
+    });
+  });
+
+  /* ---------------- field randomizer ---------------- */
+  const randomizeBtn = document.getElementById("randomizeBtn");
+  const randResult = document.getElementById("randResult");
+  const randHistory = document.getElementById("randHistory");
+  let randHistoryList = [];
+  let randomizing = false;
+
+  function renderHistory(){
+    if (randHistoryList.length === 0){ randHistory.innerHTML = ""; return; }
+    let html = '<div class="rand-history-label">Recent results</div>';
+    randHistoryList.slice(0,8).forEach(r => { html += `<span class="chip">${r}</span>`; });
+    randHistory.innerHTML = html;
+  }
+
+  randomizeBtn.addEventListener("click", function(){
+    if (randomizing) return;
+    randomizing = true;
+    randomizeBtn.disabled = true;
+    randResult.className = "rand-result";
+    const spinDuration = 1400;
+    const start = performance.now();
+
+    function spin(now){
+      const elapsed = now - start;
+      if (elapsed < spinDuration){
+        randResult.textContent = Math.random() < 0.5 ? "ROW 1" : "ROW 2";
+        playFlap();
+        setTimeout(() => requestAnimationFrame(spin), 70);
+      } else {
+        const final = Math.random() < 0.5 ? "ROW 1" : "ROW 2";
+        randResult.textContent = final;
+        randResult.className = "rand-result " + (final === "ROW 1" ? "locked-1" : "locked-2");
+        playWin();
+        fireConfetti(final === "ROW 1" ? "win-red" : "win-blue");
+        randHistoryList.unshift(final);
+        renderHistory();
+        randomizing = false;
+        randomizeBtn.disabled = false;
+      }
+    }
+    requestAnimationFrame(spin);
+  });
 
   updateRunning();
 })();
