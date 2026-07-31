@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pollen Collection — Match Scorekeeper</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=JetBrains+Mono:wght@400;500;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --black:#0a0a0b;
+    --panel:#141416;
+    --panel-2:#1b1b1e;
+    --yellow:#f5c400;
+    --yellow-dim:#a88900;
+    --paper:#f2f2ed;
+    --gray:#8a8a86;
+    --gray-dim:#54544f;
+    --red:#e6394a;
+    --red-dim:#3a1519;
+    --blue:#2f7cf6;
+    --blue-dim:#12203f;
+    --radius:14px;
+    --display: 'Archivo Black', 'Inter', sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+    --body: 'Inter', sans-serif;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--black);
+    color:var(--paper);
+    font-family:var(--body);
+    min-height:100vh;
+    position:relative;
+    overflow-x:hidden;
+  }
+
+  /* faint hazard texture in the corners */
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    pointer-events:none;
+    background:
+      repeating-linear-gradient(135deg, rgba(245,196,0,0.035) 0 18px, transparent 18px 36px);
+    -webkit-mask-image: radial-gradient(ellipse at 10% 0%, black, transparent 45%),
+                         radial-gradient(ellipse at 90% 100%, black, transparent 45%);
+    mask-image: radial-gradient(ellipse at 10% 0%, black, transparent 45%),
+                radial-gradient(ellipse at 90% 100%, black, transparent 45%);
+    z-index:0;
+  }
+
+  .wrap{max-width:1180px; margin:0 auto; padding:0 24px 80px; position:relative; z-index:1;}
+
+  /* ---------- header ---------- */
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:28px 0 18px;
+    border-bottom:1px solid rgba(242,242,237,0.08);
+  }
+  .brand{display:flex; align-items:center; gap:14px;}
+  .hex{
+    width:34px; height:34px;
+    background:var(--yellow);
+    clip-path:polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0% 50%);
+    flex:0 0 auto;
+    animation:pulseHex 3.5s ease-in-out infinite;
+  }
+  @keyframes pulseHex{0%,100%{opacity:1;}50%{opacity:.55;}}
+  .brand-text .kicker{
+    font-family:var(--mono); font-size:11px; letter-spacing:.22em; text-transform:uppercase;
+    color:var(--yellow); margin:0 0 2px;
+  }
+  .brand-text h1{
+    font-family:var(--display); font-size:22px; margin:0; letter-spacing:.01em;
+    color:var(--paper);
+  }
+  .status-pill{
+    font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--gray); border:1px solid rgba(242,242,237,0.15); border-radius:999px;
+    padding:7px 14px; display:flex; align-items:center; gap:8px;
+  }
+  .status-dot{width:7px;height:7px;border-radius:50%;background:var(--yellow); box-shadow:0 0 8px var(--yellow);}
+
+  /* ---------- setup ---------- */
+  .subtitle{
+    color:var(--gray); font-size:14.5px; line-height:1.6; max-width:560px;
+    margin:22px 0 30px;
+  }
+  .subtitle b{color:var(--paper); font-weight:600;}
+
+  .arena{
+    display:grid; grid-template-columns:1fr auto 1fr; gap:22px; align-items:start;
+  }
+  @media (max-width:860px){ .arena{grid-template-columns:1fr;} .vs-col{order:2; margin:6px auto;} .panel-blue{order:3;} }
+
+  .panel{
+    background:linear-gradient(180deg, var(--panel), var(--panel-2));
+    border-radius:var(--radius);
+    border:1px solid rgba(242,242,237,0.08);
+    padding:22px 22px 26px;
+    position:relative;
+    overflow:hidden;
+  }
+  .panel::before{
+    content:""; position:absolute; top:0; left:0; right:0; height:3px;
+  }
+  .panel-red::before{background:var(--red);}
+  .panel-blue::before{background:var(--blue);}
+
+  .panel-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;}
+  .alliance-name{
+    font-family:var(--display); font-size:19px; letter-spacing:.02em;
+  }
+  .panel-red .alliance-name{color:var(--red);}
+  .panel-blue .alliance-name{color:var(--blue);}
+  .alliance-input{
+    background:transparent; border:none; border-bottom:1px dashed rgba(242,242,237,0.18);
+    font-family:var(--body); font-size:12.5px; color:var(--gray);
+    padding:3px 0; width:120px; text-align:right; outline:none;
+  }
+  .alliance-input:focus{border-color:var(--yellow); color:var(--paper);}
+
+  .stat-row{
+    display:grid; grid-template-columns:1fr auto; align-items:center; gap:12px;
+    padding:12px 0; border-top:1px solid rgba(242,242,237,0.06);
+  }
+  .stat-row:first-of-type{border-top:1px solid rgba(242,242,237,0.06); margin-top:14px;}
+  .stat-label{font-size:13.5px; color:var(--paper); line-height:1.3;}
+  .stat-points{display:block; font-family:var(--mono); font-size:11px; color:var(--gray-dim); margin-top:2px;}
+
+  .stepper{display:flex; align-items:center; gap:0; border:1px solid rgba(242,242,237,0.14); border-radius:9px; overflow:hidden;}
+  .stepper button{
+    width:30px; height:30px; border:none; background:transparent; color:var(--paper);
+    font-family:var(--mono); font-size:16px; cursor:pointer; transition:background .15s;
+  }
+  .stepper button:hover{background:rgba(245,196,0,0.14); color:var(--yellow);}
+  .stepper button:active{background:rgba(245,196,0,0.28);}
+  .stepper input{
+    width:36px; text-align:center; border:none; background:transparent; color:var(--paper);
+    font-family:var(--mono); font-weight:700; font-size:14px; -moz-appearance:textfield;
+    border-left:1px solid rgba(242,242,237,0.14); border-right:1px solid rgba(242,242,237,0.14);
+    height:30px; outline:none;
+  }
+  .stepper input::-webkit-outer-spin-button,.stepper input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+  .stepper input:focus{background:rgba(245,196,0,0.08);}
+
+  .panel-sub{
+    margin-top:16px; padding-top:14px; border-top:1px solid rgba(242,242,237,0.08);
+    display:flex; justify-content:space-between; align-items:baseline;
+  }
+  .panel-sub .lbl{font-family:var(--mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--gray-dim);}
+  .panel-sub .val{font-family:var(--mono); font-size:18px; font-weight:700; color:var(--gray);}
+
+  .vs-col{display:flex; flex-direction:column; align-items:center; gap:14px; padding-top:34px;}
+  .vs-hex{
+    width:58px; height:58px;
+    background:var(--black); border:2px solid var(--yellow);
+    clip-path:polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0% 50%);
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--display); font-size:13px; color:var(--yellow);
+  }
+
+  /* ---------- reveal button ---------- */
+  .reveal-zone{display:flex; justify-content:center; margin:40px 0 8px;}
+  .reveal-btn{
+    font-family:var(--display); font-size:15px; letter-spacing:.08em;
+    background:var(--yellow); color:var(--black); border:none;
+    padding:18px 44px; border-radius:999px; cursor:pointer;
+    box-shadow:0 0 0 0 rgba(245,196,0,.5);
+    transition:transform .15s ease, box-shadow .3s ease;
+    animation:glow 2.2s ease-in-out infinite;
+  }
+  @keyframes glow{
+    0%,100%{box-shadow:0 0 0 0 rgba(245,196,0,.35);}
+    50%{box-shadow:0 0 0 14px rgba(245,196,0,0);}
+  }
+  .reveal-btn:hover{transform:translateY(-2px);}
+  .reveal-btn:active{transform:translateY(0);}
+  .reveal-hint{
+    text-align:center; font-family:var(--mono); font-size:11px; color:var(--gray-dim);
+    letter-spacing:.08em; margin-bottom:30px;
+  }
+
+  /* ---------- reveal overlay ---------- */
+  .reveal-stage{
+    display:none;
+    margin-top:12px;
+  }
+  .reveal-stage.active{display:block;}
+  .setup-stage.hidden{display:none;}
+
+  .countdown{
+    display:flex; align-items:center; justify-content:center;
+    height:340px;
+    font-family:var(--display); font-size:120px; color:var(--yellow);
+  }
+  .countdown span{animation:pop .7s ease;}
+  @keyframes pop{0%{transform:scale(0.3); opacity:0;}60%{transform:scale(1.15); opacity:1;}100%{transform:scale(1);}}
+
+  .score-board{
+    display:none;
+    grid-template-columns:1fr auto 1fr;
+    align-items:center;
+    gap:18px;
+    padding:20px 0 10px;
+  }
+  .score-board.active{display:grid;}
+  @media (max-width:760px){ .score-board{grid-template-columns:1fr; text-align:center;} .score-board .vs-mid{order:2;} .score-board .side-blue{order:3;} }
+
+  .side{text-align:center;}
+  .side-label{
+    font-family:var(--display); font-size:20px; letter-spacing:.03em; margin-bottom:10px;
+  }
+  .side-red .side-label{color:var(--red);}
+  .side-blue .side-label{color:var(--blue);}
+
+  .flap-row{display:flex; justify-content:center; gap:6px;}
+  .flap{
+    width:64px; height:92px; background:#0f0f10; border-radius:8px;
+    border:1px solid rgba(242,242,237,0.12);
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--mono); font-weight:800; font-size:52px; color:var(--paper);
+    position:relative; overflow:hidden;
+    box-shadow: inset 0 -2px 0 rgba(0,0,0,.5), 0 6px 18px rgba(0,0,0,.35);
+  }
+  .flap::after{
+    content:""; position:absolute; left:0; right:0; top:50%; height:2px;
+    background:rgba(0,0,0,.55); transform:translateY(-1px);
+  }
+  .side-red .flap{box-shadow: inset 0 -2px 0 rgba(0,0,0,.5), 0 0 22px rgba(230,57,74,.18), 0 6px 18px rgba(0,0,0,.35);}
+  .side-blue .flap{box-shadow: inset 0 -2px 0 rgba(0,0,0,.5), 0 0 22px rgba(47,124,246,.18), 0 6px 18px rgba(0,0,0,.35);}
+
+  .vs-mid{
+    font-family:var(--display); font-size:15px; color:var(--gray-dim);
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+  }
+  .vs-mid .vs-hex{width:46px;height:46px; font-size:11px;}
+
+  .winner-banner{
+    max-width:640px; margin:26px auto 0; text-align:center;
+    padding:18px 24px; border-radius:12px;
+    font-family:var(--display); font-size:19px; letter-spacing:.02em;
+    opacity:0; transform:translateY(10px);
+    transition:opacity .5s ease, transform .5s ease;
+    border:1px solid transparent;
+  }
+  .winner-banner.show{opacity:1; transform:translateY(0);}
+  .winner-banner.win-red{background:linear-gradient(180deg, rgba(230,57,74,.16), rgba(230,57,74,.04)); color:#ff8a94; border-color:rgba(230,57,74,.4);}
+  .winner-banner.win-blue{background:linear-gradient(180deg, rgba(47,124,246,.16), rgba(47,124,246,.04)); color:#8ab4ff; border-color:rgba(47,124,246,.4);}
+  .winner-banner.win-tie{background:linear-gradient(180deg, rgba(245,196,0,.16), rgba(245,196,0,.04)); color:var(--yellow); border-color:rgba(245,196,0,.4);}
+  .winner-banner small{display:block; font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--gray); margin-top:6px; font-weight:400;}
+
+  /* ---------- breakdown ---------- */
+  .breakdown{
+    margin-top:36px; display:grid; grid-template-columns:1fr 1fr; gap:22px;
+    opacity:0; transform:translateY(14px); transition:opacity .6s ease .15s, transform .6s ease .15s;
+  }
+  .breakdown.show{opacity:1; transform:translateY(0);}
+  @media (max-width:760px){ .breakdown{grid-template-columns:1fr;} }
+
+  .bd-card{
+    background:var(--panel); border-radius:var(--radius); border:1px solid rgba(242,242,237,0.08);
+    padding:20px 22px;
+  }
+  .bd-card h3{
+    font-family:var(--display); font-size:14px; letter-spacing:.03em; margin:0 0 14px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .bd-red h3{color:var(--red);} .bd-blue h3{color:var(--blue);}
+  .bd-line{
+    display:flex; justify-content:space-between; align-items:baseline;
+    font-size:13px; padding:8px 0; border-top:1px solid rgba(242,242,237,0.06);
+    color:var(--gray);
+  }
+  .bd-line:first-of-type{border-top:none;}
+  .bd-line b{color:var(--paper); font-weight:500;}
+  .bd-line .pts{font-family:var(--mono); font-weight:700;}
+  .pts.pos{color:#7ee08a;}
+  .pts.neg{color:#ff8a8a;}
+  .pts.zero{color:var(--gray-dim);}
+  .bd-total{
+    display:flex; justify-content:space-between; align-items:center;
+    margin-top:12px; padding-top:14px; border-top:1px solid rgba(242,242,237,0.14);
+    font-family:var(--mono); font-size:15px; font-weight:800; color:var(--paper);
+  }
+
+  .reset-zone{display:flex; justify-content:center; margin:44px 0 10px;}
+  .reset-btn{
+    font-family:var(--mono); font-size:12px; letter-spacing:.1em; text-transform:uppercase;
+    background:transparent; border:1px solid rgba(242,242,237,0.2); color:var(--gray);
+    padding:12px 26px; border-radius:999px; cursor:pointer; transition:all .2s;
+  }
+  .reset-btn:hover{border-color:var(--yellow); color:var(--yellow);}
+
+  footer{
+    text-align:center; margin-top:60px; padding-top:22px;
+    border-top:1px solid rgba(242,242,237,0.06);
+    font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; color:var(--gray-dim);
+  }
+
+  #confetti-canvas{position:fixed; inset:0; pointer-events:none; z-index:50;}
+
+  .sound-toggle{
+    position:fixed; bottom:22px; right:22px; z-index:60;
+    width:44px; height:44px; border-radius:50%;
+    background:var(--panel); border:1px solid rgba(242,242,237,0.15);
+    color:var(--gray); font-size:16px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .sound-toggle:hover{border-color:var(--yellow); color:var(--yellow);}
+</style>
+</head>
+<body>
+
+<canvas id="confetti-canvas"></canvas>
+<button class="sound-toggle" id="soundToggle" title="Toggle sound" aria-label="Toggle sound">🔊</button>
+
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="hex"></div>
+      <div class="brand-text">
+        <p class="kicker">FIRST Tech Challenge · Skill Builder</p>
+        <h1>Pollen Collection</h1>
+      </div>
+    </div>
+    <div class="status-pill"><span class="status-dot"></span> Match Scorekeeper</div>
+  </header>
+
+  <p class="subtitle">Enter each alliance's match stats below, then hit <b>Reveal Score</b> for a full scoreboard reveal — flap counters, a winner call, and the full points breakdown.</p>
+
+  <!-- ================= SETUP STAGE ================= -->
+  <div class="setup-stage" id="setupStage">
+    <div class="arena">
+
+      <!-- RED PANEL -->
+      <div class="panel panel-red">
+        <div class="panel-head">
+          <div class="alliance-name">RED ALLIANCE</div>
+          <input class="alliance-input" id="redTeam" placeholder="Team name / #" value="">
+        </div>
+
+        <div class="stat-row">
+          <div class="stat-label">Artifacts scored<span class="stat-points">2 pts each</span></div>
+          <div class="stepper" data-field="red-artifacts"><button data-dir="-1">–</button><input type="number" value="0" min="0" readonly><button data-dir="1">+</button></div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label">BioBuzz Balls scored<span class="stat-points">4 pts each</span></div>
+          <div class="stepper" data-field="red-balls"><button data-dir="-1">–</button><input type="number" value="0" min="0" readonly><button data-dir="1">+</button></div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label">Robots that left zone in Auto<span class="stat-points">3 pts each · max 2</span></div>
+          <div class="stepper" data-field="red-auto"><button data-dir="-1">–</button><input type="number" value="0" min="0" max="2" readonly><button data-dir="1">+</button></div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label">Partial parks<span class="stat-points">5 pts each · max 2</span></div>
+          <div class="stepper" data-field="red-partial"><button data-dir="-1">–</button><input type="number" value="0" min="0" max="2" readonly><button data-dir="1">+</button></div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label">Full parks<span class="stat-points">10 pts each · max 2</span></div>
+          <div class="stepper" data-field="red-full"><button data-dir="-1">–</button><input type="number" value="0" min="0" max="2" readonly><button data-dir="1">+</button></div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label">Fouls — carry / contact<span class="stat-points">−3 pts each</span></div>
+          <div class="stepper" data-field="red-foul3"><button data-dir="-1">–</button><input type="number" value="0" min="0" readonly><button data-dir="1">+</button></div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label">Fouls — knock-off High Zone<span class="stat-points">−5 pts each</span></div>
+          <div class="stepper" data-field="red-foul5"><button data-dir="-1">–</button><input type="number" value="0" min="0" readonly><button data-dir="1">+</button></div>
+        </div>
+
+        <div class="panel-sub"><span class="lbl">Running total</span><span class="val" id="redRunning">0</span></div>
+      </div>
+
+      <!-- VS -->
+      <div class="vs-col">
+        <div class="vs-hex">VS</div>
+      </div>
+
+      <!-- BLUE PANEL -->
+      <div class="panel panel-blue">
+        <div class="panel-head">
+          <div class="alliance-name">BLUE ALLIANCE</div>
+          <input class="alliance-input" id="blueTeam" placeholder="Team name / #" value="">
+        </div>
+
+        <div class="stat-row">
+          <div class="stat-label">Artifacts scored<span class="stat-points">2 pts each</span></div>
+          <div class="stepper" data-field="blue-artifacts"><button data-dir="-1">–</button><input type="number" value="0" min="0" readonly><button data-dir="1">+</button></div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label">BioBuzz Balls scored<span class="stat-points">4 pts each</span></div>
+          <div class="stepper" data-field="blue-balls"><button data-dir="-1">–</button><input type="number" value="0" min="0" readonly><button data-dir="1">+</button></div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label">Robots that left zone in Auto<span class="stat-points">3 pts each · max 2</span></div>
+          <div class="stepper" data-field="blue-auto"><button data-dir="-1">–</button><input type="number" value="0" min="0" max="2" readonly><button data-dir="1">+</button></div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label">Partial parks<span class="stat-points">5 pts each · max 2</span></div>
+          <div class="stepper" data-field="blue-partial"><button data-dir="-1">–</button><input type="number" value="0" min="0" max="2" readonly><button data-dir="1">+</button></div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label">Full parks<span class="stat-points">10 pts each · max 2</span></div>
+          <div class="stepper" data-field="blue-full"><button data-dir="-1">–</button><input type="number" value="0" min="0" max="2" readonly><button data-dir="1">+</button></div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label">Fouls — carry / contact<span class="stat-points">−3 pts each</span></div>
+          <div class="stepper" data-field="blue-foul3"><button data-dir="-1">–</button><input type="number" value="0" min="0" readonly><button data-dir="1">+</button></div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label">Fouls — knock-off High Zone<span class="stat-points">−5 pts each</span></div>
+          <div class="stepper" data-field="blue-foul5"><button data-dir="-1">–</button><input type="number" value="0" min="0" readonly><button data-dir="1">+</button></div>
+        </div>
+
+        <div class="panel-sub"><span class="lbl">Running total</span><span class="val" id="blueRunning">0</span></div>
+      </div>
+    </div>
+
+    <div class="reveal-zone"><button class="reveal-btn" id="revealBtn">⬡ REVEAL SCORE ⬡</button></div>
+    <p class="reveal-hint">SCORES STAY HIDDEN UNTIL YOU REVEAL</p>
+  </div>
+
+  <!-- ================= REVEAL STAGE ================= -->
+  <div class="reveal-stage" id="revealStage">
+    <div class="countdown" id="countdown"></div>
+
+    <div class="score-board" id="scoreBoard">
+      <div class="side side-red">
+        <div class="side-label" id="redName">RED ALLIANCE</div>
+        <div class="flap-row" id="redFlaps"></div>
+      </div>
+      <div class="vs-mid">
+        <div class="vs-hex">FINAL</div>
+      </div>
+      <div class="side side-blue">
+        <div class="side-label" id="blueName">BLUE ALLIANCE</div>
+        <div class="flap-row" id="blueFlaps"></div>
+      </div>
+    </div>
+
+    <div class="winner-banner" id="winnerBanner"></div>
+
+    <div class="breakdown" id="breakdown">
+      <div class="bd-card bd-red">
+        <h3>🔴 Red Breakdown</h3>
+        <div id="redBdLines"></div>
+        <div class="bd-total"><span>Total</span><span id="redBdTotal">0</span></div>
+      </div>
+      <div class="bd-card bd-blue">
+        <h3>🔵 Blue Breakdown</h3>
+        <div id="blueBdLines"></div>
+        <div class="bd-total"><span>Total</span><span id="blueBdTotal">0</span></div>
+      </div>
+    </div>
+
+    <div class="reset-zone"><button class="reset-btn" id="resetBtn">↺ New Match</button></div>
+  </div>
+
+  <footer>POLLEN COLLECTION SCOREKEEPER · BUILT FOR SKILL BUILDERS CHALLENGE #5 · UNOFFICIAL FAN TOOL</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- point values ---------------- */
+  const POINTS = {
+    artifacts: 2,
+    balls: 4,
+    auto: 3,
+    partial: 5,
+    full: 10,
+    foul3: -3,
+    foul5: -5
+  };
+
+  const FIELDS = ["artifacts","balls","auto","partial","full","foul3","foul5"];
+
+  /* ---------------- stepper wiring ---------------- */
+  function getVal(alliance, field){
+    const stepper = document.querySelector(`.stepper[data-field="${alliance}-${field}"] input`);
+    return parseInt(stepper.value, 10) || 0;
+  }
+  function setVal(alliance, field, v){
+    const stepper = document.querySelector(`.stepper[data-field="${alliance}-${field}"] input`);
+    const max = stepper.getAttribute("max");
+    const min = 0;
+    if (max !== null) v = Math.min(v, parseInt(max,10));
+    v = Math.max(v, min);
+    stepper.value = v;
+  }
+
+  function allianceTotal(alliance){
+    let total = 0;
+    FIELDS.forEach(f => { total += getVal(alliance, f) * POINTS[f]; });
+    return total;
+  }
+
+  function updateRunning(){
+    document.getElementById("redRunning").textContent = allianceTotal("red");
+    document.getElementById("blueRunning").textContent = allianceTotal("blue");
+  }
+
+  document.querySelectorAll(".stepper").forEach(stepper => {
+    const field = stepper.getAttribute("data-field");
+    const [alliance, key] = field.split("-");
+    stepper.querySelectorAll("button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const dir = parseInt(btn.getAttribute("data-dir"), 10);
+        setVal(alliance, key, getVal(alliance, key) + dir);
+        updateRunning();
+        playTick();
+      });
+    });
+  });
+
+  /* ---------------- sound (Web Audio, no files) ---------------- */
+  let audioCtx = null;
+  let soundOn = true;
+  function ctx(){
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+  function beep(freq, dur, type, gainVal, delay){
+    if (!soundOn) return;
+    delay = delay || 0;
+    const c = ctx();
+    const osc = c.createOscillator();
+    const gain = c.createGain();
+    osc.type = type || "square";
+    osc.frequency.value = freq;
+    gain.gain.value = gainVal || 0.06;
+    osc.connect(gain); gain.connect(c.destination);
+    const t = c.currentTime + delay;
+    osc.start(t);
+    gain.gain.setValueAtTime(gainVal || 0.06, t);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.stop(t + dur);
+  }
+  function playTick(){ beep(720, 0.05, "square", 0.035); }
+  function playCountdown(){ beep(440, 0.12, "square", 0.06); }
+  function playGo(){ beep(880, 0.25, "sawtooth", 0.07); beep(1320, 0.3, "sawtooth", 0.05, 0.05); }
+  function playFlap(){ beep(200 + Math.random()*80, 0.03, "square", 0.02); }
+  function playWin(){
+    [523.25,659.25,783.99,1046.5].forEach((f,i)=>beep(f, 0.35, "sine", 0.06, i*0.11));
+  }
+
+  document.getElementById("soundToggle").addEventListener("click", function(){
+    soundOn = !soundOn;
+    this.textContent = soundOn ? "🔊" : "🔇";
+  });
+
+  /* ---------------- reveal sequence ---------------- */
+  const revealBtn = document.getElementById("revealBtn");
+  const setupStage = document.getElementById("setupStage");
+  const revealStage = document.getElementById("revealStage");
+  const countdownEl = document.getElementById("countdown");
+  const scoreBoard = document.getElementById("scoreBoard");
+  const winnerBanner = document.getElementById("winnerBanner");
+  const breakdown = document.getElementById("breakdown");
+
+  function buildFlaps(container, digits){
+    container.innerHTML = "";
+    digits.forEach(() => {
+      const d = document.createElement("div");
+      d.className = "flap";
+      d.textContent = "0";
+      container.appendChild(d);
+    });
+  }
+
+  function digitsOf(n, minLen){
+    let s = String(Math.max(0,n));
+    while (s.length < minLen) s = "0" + s;
+    return s.split("").map(Number);
+  }
+
+  function animateFlap(cell, finalDigit, duration){
+    const start = performance.now();
+    function frame(now){
+      const elapsed = now - start;
+      if (elapsed >= duration){
+        cell.textContent = finalDigit;
+        return;
+      }
+      cell.textContent = Math.floor(Math.random()*10);
+      playFlap();
+      requestAnimationFrame(() => setTimeout(() => frame(performance.now()), 45));
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function revealScoreboard(redTotal, blueTotal, redName, blueName){
+    const len = Math.max(2, String(Math.max(redTotal,blueTotal,0)).length);
+    const redDigits = digitsOf(redTotal, len);
+    const blueDigits = digitsOf(blueTotal, len);
+
+    document.getElementById("redName").textContent = redName || "RED ALLIANCE";
+    document.getElementById("blueName").textContent = blueName || "BLUE ALLIANCE";
+
+    const redFlaps = document.getElementById("redFlaps");
+    const blueFlaps = document.getElementById("blueFlaps");
+    buildFlaps(redFlaps, redDigits);
+    buildFlaps(blueFlaps, blueDigits);
+    scoreBoard.classList.add("active");
+
+    const cells = [...redFlaps.children, ...blueFlaps.children];
+    const finals = [...redDigits, ...blueDigits];
+    cells.forEach((cell, i) => {
+      animateFlap(cell, finals[i], 900 + i * 180);
+    });
+
+    const settleTime = 900 + cells.length * 180 + 200;
+    setTimeout(() => {
+      let text, cls;
+      if (redTotal > blueTotal){ text = `🏆 ${redName || "RED ALLIANCE"} WINS`; cls = "win-red"; }
+      else if (blueTotal > redTotal){ text = `🏆 ${blueName || "BLUE ALLIANCE"} WINS`; cls = "win-blue"; }
+      else { text = "🤝 IT'S A TIE"; cls = "win-tie"; }
+      winnerBanner.innerHTML = text + `<small>${redTotal} — ${blueTotal}</small>`;
+      winnerBanner.className = "winner-banner show " + cls;
+      playWin();
+      fireConfetti(cls);
+      buildBreakdown();
+      breakdown.classList.add("show");
+    }, settleTime);
+  }
+
+  function bdLine(label, count, pts){
+    const total = count * pts;
+    const cls = total > 0 ? "pos" : (total < 0 ? "neg" : "zero");
+    const sign = total > 0 ? "+" : "";
+    return `<div class="bd-line"><span><b>${count}×</b> ${label}</span><span class="pts ${cls}">${sign}${total}</span></div>`;
+  }
+
+  function buildBreakdown(){
+    const labels = {
+      artifacts:"Artifacts scored", balls:"BioBuzz Balls scored", auto:"Auto zone-leave bonus",
+      partial:"Partial parks", full:"Full parks", foul3:"Fouls (carry/contact)", foul5:"Fouls (knock-off)"
+    };
+    ["red","blue"].forEach(alliance => {
+      const linesEl = document.getElementById(alliance + "BdLines");
+      let html = "";
+      FIELDS.forEach(f => { html += bdLine(labels[f], getVal(alliance,f), POINTS[f]); });
+      linesEl.innerHTML = html;
+      document.getElementById(alliance + "BdTotal").textContent = allianceTotal(alliance);
+    });
+  }
+
+  revealBtn.addEventListener("click", function(){
+    setupStage.classList.add("hidden");
+    revealStage.classList.add("active");
+    winnerBanner.className = "winner-banner";
+    breakdown.classList.remove("show");
+    scoreBoard.classList.remove("active");
+    window.scrollTo({top:0, behavior:"smooth"});
+
+    const redTotal = allianceTotal("red");
+    const blueTotal = allianceTotal("blue");
+    const redName = document.getElementById("redTeam").value.trim();
+    const blueName = document.getElementById("blueTeam").value.trim();
+
+    let count = 3;
+    countdownEl.innerHTML = `<span>${count}</span>`;
+    playCountdown();
+    const timer = setInterval(() => {
+      count--;
+      if (count > 0){
+        countdownEl.innerHTML = `<span>${count}</span>`;
+        playCountdown();
+      } else {
+        clearInterval(timer);
+        countdownEl.innerHTML = `<span>GO</span>`;
+        playGo();
+        setTimeout(() => {
+          countdownEl.style.display = "none";
+          revealScoreboard(redTotal, blueTotal, redName, blueName);
+        }, 550);
+      }
+    }, 800);
+  });
+
+  document.getElementById("resetBtn").addEventListener("click", function(){
+    revealStage.classList.remove("active");
+    setupStage.classList.remove("hidden");
+    countdownEl.style.display = "flex";
+    countdownEl.innerHTML = "";
+    scoreBoard.classList.remove("active");
+    winnerBanner.className = "winner-banner";
+    breakdown.classList.remove("show");
+    window.scrollTo({top:0, behavior:"smooth"});
+  });
+
+  /* ---------------- confetti ---------------- */
+  const canvas = document.getElementById("confetti-canvas");
+  const c2d = canvas.getContext("2d");
+  function resizeCanvas(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+  window.addEventListener("resize", resizeCanvas);
+  resizeCanvas();
+
+  function fireConfetti(winCls){
+    const colors = winCls === "win-red" ? ["#e6394a","#f5c400","#ffffff"]
+                 : winCls === "win-blue" ? ["#2f7cf6","#f5c400","#ffffff"]
+                 : ["#f5c400","#ffffff","#8a8a86"];
+    const particles = [];
+    const N = 160;
+    for (let i=0;i<N;i++){
+      particles.push({
+        x: canvas.width/2 + (Math.random()-0.5)*200,
+        y: canvas.height*0.35,
+        vx: (Math.random()-0.5)*9,
+        vy: -Math.random()*9 - 4,
+        g: 0.22 + Math.random()*0.1,
+        size: 4 + Math.random()*5,
+        color: colors[Math.floor(Math.random()*colors.length)],
+        rot: Math.random()*Math.PI*2,
+        vr: (Math.random()-0.5)*0.3,
+        life: 0,
+        maxLife: 130 + Math.random()*60
+      });
+    }
+    function tick(){
+      c2d.clearRect(0,0,canvas.width,canvas.height);
+      let alive = false;
+      particles.forEach(p => {
+        if (p.life >= p.maxLife) return;
+        alive = true;
+        p.life++;
+        p.vy += p.g*0.12;
+        p.x += p.vx;
+        p.y += p.vy;
+        p.rot += p.vr;
+        const fade = 1 - p.life/p.maxLife;
+        c2d.save();
+        c2d.globalAlpha = Math.max(0,fade);
+        c2d.translate(p.x,p.y);
+        c2d.rotate(p.rot);
+        c2d.fillStyle = p.color;
+        c2d.fillRect(-p.size/2,-p.size/2,p.size,p.size*0.6);
+        c2d.restore();
+      });
+      if (alive) requestAnimationFrame(tick);
+      else c2d.clearRect(0,0,canvas.width,canvas.height);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  updateRunning();
+})();
+</script>
+</body>
+</html>
