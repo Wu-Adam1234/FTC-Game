@@ -100,7 +100,57 @@
   .view{display:none;}
   .view.active{display:block;}
 
-  /* ---------- field randomization page ---------- */
+  /* ---------- match timer page ---------- */
+  .timer-card{
+    max-width:720px; margin:36px auto 0; text-align:center;
+    background:linear-gradient(180deg, var(--panel), var(--panel-2));
+    border:1px solid rgba(242,242,237,0.08); border-radius:var(--radius);
+    padding:40px 36px 34px;
+    transition:box-shadow .5s ease;
+  }
+  .phase-badge{
+    display:inline-block; font-family:var(--display); font-size:15px; letter-spacing:.06em;
+    padding:9px 22px; border-radius:999px; margin-bottom:26px;
+    background:rgba(242,242,237,0.08); color:var(--gray);
+    transition:background .4s ease, color .4s ease, box-shadow .4s ease;
+  }
+  .phase-badge.p-auto{background:rgba(245,196,0,0.16); color:var(--yellow); box-shadow:0 0 20px rgba(245,196,0,.15);}
+  .phase-badge.p-handoff{background:rgba(255,138,61,0.18); color:#ff9d5c; box-shadow:0 0 20px rgba(255,138,61,.18); animation:badgeFlash 1s ease-in-out infinite;}
+  .phase-badge.p-teleop{background:rgba(47,124,246,0.16); color:#6fa0ff; box-shadow:0 0 20px rgba(47,124,246,.15);}
+  .phase-badge.p-endgame{background:rgba(230,57,74,0.18); color:#ff7c8a; box-shadow:0 0 20px rgba(230,57,74,.2); animation:badgeFlash .6s ease-in-out infinite;}
+  .phase-badge.p-done{background:rgba(126,224,138,0.16); color:#7ee08a;}
+  @keyframes badgeFlash{0%,100%{opacity:1;}50%{opacity:.55;}}
+
+  .timer-flap-row{display:flex; align-items:center; justify-content:center; gap:6px; margin-bottom:26px;}
+  .timer-flap{width:70px; height:100px; font-size:56px;}
+  .timer-colon{font-family:var(--mono); font-weight:800; font-size:48px; color:var(--gray); padding:0 2px;}
+
+  .phase-track{
+    display:flex; height:10px; border-radius:6px; overflow:hidden; margin-bottom:30px;
+    background:#0f0f10; border:1px solid rgba(242,242,237,0.08);
+  }
+  .phase-track .seg{height:100%; position:relative; background:rgba(242,242,237,0.06); transition:background .3s ease;}
+  .phase-track .seg .fill{position:absolute; top:0; left:0; bottom:0; width:0%; background:var(--yellow);}
+  .phase-track .seg.done .fill{width:100% !important; background:var(--gray-dim);}
+
+  .timer-controls{display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-bottom:30px;}
+  .timer-controls .reveal-btn{padding:16px 34px; font-size:13.5px;}
+  .timer-controls .reset-btn{padding:16px 22px;}
+  .timer-controls .reset-btn:disabled, .timer-controls .reveal-btn:disabled{opacity:.35; cursor:not-allowed;}
+
+  .phase-legend{
+    display:flex; justify-content:center; gap:22px; flex-wrap:wrap;
+    padding-top:22px; border-top:1px solid rgba(242,242,237,0.08);
+  }
+  .phase-legend-item{
+    font-family:var(--mono); font-size:11.5px; color:var(--gray); display:flex; align-items:center; gap:7px;
+    opacity:.5; transition:opacity .3s ease;
+  }
+  .phase-legend-item.current{opacity:1; color:var(--paper);}
+  .phase-legend-item b{color:var(--paper); font-weight:700;}
+  .phase-legend-item .dot{width:8px; height:8px; border-radius:50%; display:inline-block;}
+
+
   .randomizer-card{
     max-width:640px; margin:36px auto 0; text-align:center;
     background:linear-gradient(180deg, var(--panel), var(--panel-2));
@@ -401,6 +451,7 @@
   <nav class="tabnav">
     <button class="tab-btn active" data-view="score">⬡ Match Scorekeeper</button>
     <button class="tab-btn" data-view="random">⬡ Field Randomization</button>
+    <button class="tab-btn" data-view="timer">⬡ Match Timer</button>
   </nav>
 
   <!-- ================= SCOREKEEPER VIEW ================= -->
@@ -598,6 +649,38 @@
       <div class="rand-history" id="randHistory"></div>
     </div>
   </div><!-- /view-random -->
+
+  <!-- ================= MATCH TIMER VIEW ================= -->
+  <div class="view" id="view-timer">
+    <p class="subtitle">One timer, the whole match. Hit <b>Start Match</b> and it runs straight through Autonomous → Driver Handoff → Teleop → End Game on its own.</p>
+
+    <div class="timer-card">
+      <div class="phase-badge" id="phaseBadge">READY</div>
+
+      <div class="timer-flap-row">
+        <div class="flap timer-flap" id="tMin1">0</div>
+        <div class="flap timer-flap" id="tMin2">0</div>
+        <div class="timer-colon">:</div>
+        <div class="flap timer-flap" id="tSec1">0</div>
+        <div class="flap timer-flap" id="tSec2">0</div>
+      </div>
+
+      <div class="phase-track" id="phaseTrack"></div>
+
+      <div class="timer-controls">
+        <button class="reveal-btn" id="timerStartBtn">⬡ START MATCH ⬡</button>
+        <button class="reset-btn" id="timerPauseBtn" disabled>⏸ Pause</button>
+        <button class="reset-btn" id="timerResetBtn">↺ Reset</button>
+      </div>
+
+      <div class="phase-legend">
+        <div class="phase-legend-item" data-phase="0"><span class="dot" style="background:#f5c400"></span>Autonomous <b>0:30</b></div>
+        <div class="phase-legend-item" data-phase="1"><span class="dot" style="background:#ff8a3d"></span>Driver Handoff <b>0:10</b></div>
+        <div class="phase-legend-item" data-phase="2"><span class="dot" style="background:#2f7cf6"></span>Teleop <b>2:00</b></div>
+        <div class="phase-legend-item" data-phase="3"><span class="dot" style="background:#e6394a"></span>End Game <b>0:15</b></div>
+      </div>
+    </div>
+  </div><!-- /view-timer -->
 
   <footer>POLLEN COLLECTION SCOREKEEPER · BUILT FOR SKILL BUILDERS CHALLENGE #5 · UNOFFICIAL FAN TOOL</footer>
 </div>
@@ -926,6 +1009,7 @@
       const target = btn.getAttribute("data-view");
       document.getElementById("view-score").classList.toggle("active", target === "score");
       document.getElementById("view-random").classList.toggle("active", target === "random");
+      document.getElementById("view-timer").classList.toggle("active", target === "timer");
       window.scrollTo({top:0, behavior:"smooth"});
     });
   });
@@ -972,6 +1056,191 @@
     }
     requestAnimationFrame(spin);
   });
+
+  /* ---------------- match timer ---------------- */
+  const PHASES = [
+    { key:"auto",    label:"AUTONOMOUS",                         dur:30,  cls:"p-auto" },
+    { key:"handoff", label:"DRIVER HANDOFF \u2014 GRAB YOUR CONTROLLER", dur:10, cls:"p-handoff" },
+    { key:"teleop",  label:"TELEOP",                              dur:120, cls:"p-teleop" },
+    { key:"endgame", label:"END GAME",                            dur:15,  cls:"p-endgame" }
+  ];
+  const MATCH_TOTAL = PHASES.reduce((s,p) => s + p.dur, 0);
+
+  const phaseBadge = document.getElementById("phaseBadge");
+  const phaseTrack = document.getElementById("phaseTrack");
+  const timerStartBtn = document.getElementById("timerStartBtn");
+  const timerPauseBtn = document.getElementById("timerPauseBtn");
+  const timerResetBtn = document.getElementById("timerResetBtn");
+  const tMin1 = document.getElementById("tMin1"), tMin2 = document.getElementById("tMin2");
+  const tSec1 = document.getElementById("tSec1"), tSec2 = document.getElementById("tSec2");
+  const legendItems = document.querySelectorAll(".phase-legend-item");
+
+  // build proportional phase-track segments once
+  PHASES.forEach((p, i) => {
+    const seg = document.createElement("div");
+    seg.className = "seg";
+    seg.style.width = (p.dur / MATCH_TOTAL * 100) + "%";
+    seg.dataset.phase = i;
+    const fill = document.createElement("div");
+    fill.className = "fill";
+    seg.appendChild(fill);
+    phaseTrack.appendChild(seg);
+  });
+  const segEls = phaseTrack.querySelectorAll(".seg");
+
+  let timerState = "idle"; // idle | running | paused | done
+  let elapsed = 0;         // seconds elapsed in the whole match
+  let rafId = null;
+  let lastTick = null;
+  let lastBeepSecond = null;
+
+  function setDigits(totalSeconds){
+    const mm = Math.floor(totalSeconds / 60);
+    const ss = totalSeconds % 60;
+    const mmS = String(mm).padStart(2,"0");
+    const ssS = String(ss).padStart(2,"0");
+    tMin1.textContent = mmS[0]; tMin2.textContent = mmS[1];
+    tSec1.textContent = ssS[0]; tSec2.textContent = ssS[1];
+  }
+
+  function currentPhaseInfo(el){
+    let acc = 0;
+    for (let i=0;i<PHASES.length;i++){
+      const p = PHASES[i];
+      if (el < acc + p.dur || i === PHASES.length-1){
+        return { index:i, phase:p, phaseElapsed: el - acc, remaining: p.dur - (el - acc) };
+      }
+      acc += p.dur;
+    }
+  }
+
+  function render(){
+    const clamped = Math.min(elapsed, MATCH_TOTAL);
+    const info = currentPhaseInfo(clamped);
+    const remaining = elapsed >= MATCH_TOTAL ? 0 : Math.max(0, Math.ceil(info.remaining));
+    setDigits(elapsed >= MATCH_TOTAL ? 0 : remaining);
+
+    if (elapsed >= MATCH_TOTAL){
+      phaseBadge.textContent = "MATCH COMPLETE";
+      phaseBadge.className = "phase-badge p-done";
+    } else {
+      phaseBadge.textContent = info.phase.label;
+      phaseBadge.className = "phase-badge " + info.phase.cls;
+    }
+
+    segEls.forEach((seg, i) => {
+      const fill = seg.querySelector(".fill");
+      if (i < info.index || elapsed >= MATCH_TOTAL){
+        seg.classList.add("done");
+      } else if (i === info.index){
+        seg.classList.remove("done");
+        fill.style.width = Math.min(100, (info.phaseElapsed / info.phase.dur) * 100) + "%";
+      } else {
+        seg.classList.remove("done");
+        fill.style.width = "0%";
+      }
+    });
+    // color the active segment fill to match its phase
+    const activeSeg = segEls[info.index];
+    if (activeSeg && elapsed < MATCH_TOTAL){
+      const colorMap = ["#f5c400","#ff8a3d","#2f7cf6","#e6394a"];
+      activeSeg.querySelector(".fill").style.background = colorMap[info.index];
+    }
+
+    legendItems.forEach(item => {
+      item.classList.toggle("current", parseInt(item.dataset.phase,10) === info.index && elapsed < MATCH_TOTAL);
+    });
+  }
+
+  function tick(now){
+    if (timerState !== "running") return;
+    if (lastTick === null) lastTick = now;
+    const dt = (now - lastTick) / 1000;
+    lastTick = now;
+    elapsed += dt;
+
+    if (elapsed >= MATCH_TOTAL){
+      elapsed = MATCH_TOTAL;
+      render();
+      finishMatch();
+      return;
+    }
+
+    const info = currentPhaseInfo(elapsed);
+    const secLeft = Math.ceil(info.remaining);
+    if (secLeft <= 3 && secLeft >= 1 && secLeft !== lastBeepSecond){
+      lastBeepSecond = secLeft;
+      playCountdown();
+    }
+    // phase boundary crossed -> tone
+    const flooredElapsed = Math.floor(elapsed);
+    if (flooredElapsed !== tick._lastFloor){
+      tick._lastFloor = flooredElapsed;
+      const prevInfo = currentPhaseInfo(Math.max(0, elapsed - dt));
+      if (prevInfo.index !== info.index){
+        playGo();
+        lastBeepSecond = null;
+      }
+    }
+
+    render();
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function finishMatch(){
+    timerState = "done";
+    playWin();
+    fireConfetti("win-tie");
+    timerStartBtn.disabled = true;
+    timerPauseBtn.disabled = true;
+    timerStartBtn.textContent = "⬡ MATCH COMPLETE ⬡";
+  }
+
+  timerStartBtn.addEventListener("click", function(){
+    if (timerState === "running") return;
+    timerState = "running";
+    lastTick = null;
+    timerStartBtn.disabled = true;
+    timerPauseBtn.disabled = false;
+    timerPauseBtn.textContent = "⏸ Pause";
+    rafId = requestAnimationFrame(tick);
+  });
+
+  timerPauseBtn.addEventListener("click", function(){
+    if (timerState === "running"){
+      timerState = "paused";
+      timerPauseBtn.textContent = "\u25b6 Resume";
+      timerStartBtn.disabled = false;
+      timerStartBtn.textContent = "⬡ RESUME ⬡";
+    } else if (timerState === "paused"){
+      timerState = "running";
+      lastTick = null;
+      timerPauseBtn.textContent = "⏸ Pause";
+      timerStartBtn.disabled = true;
+      rafId = requestAnimationFrame(tick);
+    }
+  });
+
+  timerResetBtn.addEventListener("click", function(){
+    timerState = "idle";
+    elapsed = 0;
+    lastTick = null;
+    lastBeepSecond = null;
+    tick._lastFloor = undefined;
+    if (rafId) cancelAnimationFrame(rafId);
+    timerStartBtn.disabled = false;
+    timerPauseBtn.disabled = true;
+    timerStartBtn.textContent = "⬡ START MATCH ⬡";
+    timerPauseBtn.textContent = "⏸ Pause";
+    setDigits(PHASES[0].dur);
+    phaseBadge.textContent = "READY";
+    phaseBadge.className = "phase-badge";
+    segEls.forEach(seg => { seg.classList.remove("done"); seg.querySelector(".fill").style.width = "0%"; });
+    legendItems.forEach(item => item.classList.remove("current"));
+  });
+
+  // initial paint
+  setDigits(PHASES[0].dur);
 
   updateRunning();
 })();
